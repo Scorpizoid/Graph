@@ -1,0 +1,1093 @@
+REM    Graph - function plotter with numerical analysis.
+REM    Copyright (C) 2000  Emil Tchekov
+
+REM    Port for the S80 platform
+REM    Copyright (C) 2014  Sami Vuori
+
+
+REM    This program is free software: you can redistribute it and/or modify
+REM    it under the terms of the GNU General Public License as published by
+REM    the Free Software Foundation, either version 3 of the License, or
+REM    (at your option) any later version.
+
+REM    This program is distributed in the hope that it will be useful,
+REM    but WITHOUT ANY WARRANTY; without even the implied warranty of
+REM    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+REM    GNU General Public License for more details.
+
+REM    You should have received a copy of the GNU General Public License
+REM    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+REM    sambonen@gmail.com
+REM    emil@tchekov.net
+
+
+APP Graph,&2002AA24
+	ICON "C:\system\apps\graph\graph.mbm"
+ENDA
+
+INCLUDE "AppFrame.oxh"
+
+
+PROC main:
+	GLOBAL x,xg,xmin,xmax,xfakt,xc,xscl,showLabels%,reDraw%,showChart%
+	GLOBAL y,yg,ymin,ymax,yfakt,yc,yscl
+	GLOBAL aw,ew,f$(5,255),mf$(2,255),fl,stp,aus$(255)
+	LOCAL n%
+	AfSetCBAButton:(1,"New",0,0,"HandleCBA")
+	AfSetCBAButton:(2,"",0,0,"HandleCBA")
+	AfSetCBAButton:(3,"",0,0,"HandleCBA")
+	AfSetCBAButton:(4,"Quit",0,0,"HandleCBA")
+
+	AfSetStatus%:(1)
+	AfSetCBAVisible%:(1)
+	AfSetStatusVisible%:(1)
+	AfSetTitleVisible%:(0)
+	AfSetCBAButtonDefault:(1)
+	showLabels% = 1
+	showChart%=1
+	aw=-1
+	ew=1
+	xmin=-4.8
+	xmax=4.8
+	ymin=-1.5
+	ymax=1.5
+	xscl=0.2
+	yscl=0.2
+	DO
+		IF fl=0
+			gCLS
+			gSETWIN 32,0,640,200
+			gAT 250-32-30,110
+			gSTYLE 40
+			gPRINT "GRAPH v.1.0"
+			gAT 240-32-30,130
+			gSTYLE 0
+			gPRINT "from Emil Tchekov"
+		ENDIF
+		REM wkey:
+		mINIT
+		IF fl<>0
+			IF aw>=ew
+				mCASC "Limits","Under "+FIX$(aw,2,5),8,"Over "+FIX$(ew,2,5),9
+				ELSE
+				mCASC "Limits","Under "+FIX$(aw,2,5),8,"Over "+FIX$(ew,2,5),9,"Area",14,"Show",10
+			ENDIF
+			mCARD "Graph", "New",%f,"Window",2, "Limits>",16,"Calc",20,"End",%e
+			mCARD "View", "Labels",%q,"Chart",%h
+		ELSE
+			mCARD "Graph", "New",%f,"Window",2,"End",%e
+		ENDIF
+		mCASC "Masspoints","Curve",12,"Area",11,"Body",15
+		mCASC "Moments","Area",%l,"Body",%k
+		IF fl=0 OR aw>=ew
+			REM
+		ELSE
+			mCARD "Calculate","Regula Falsi",%r,"Derivative",%a,"Simpson",%s,"Curvelenght",%o,"Volume",%v,"Mantelarea",%m,"Masspoints>",16,"Moments>",16
+		ENDIF
+		mCARD "About", "Autor",%u
+		n%=GET
+		IF n%=290
+			n%=MENU
+		ELSEIF n%=-1979
+			n%=%e
+		ELSEIF n%=-1982
+			n%=%f
+		ELSEIF n%=13
+			n%=%f
+		ENDIF
+	REM	n%=Menu
+		IF n%=%q
+			IF showLabels% = 1
+				showLabels% = 0
+			ELSE	
+				showLabels%=1
+			ENDIF
+			reDraw%=1
+			Draw:
+			reDraw%=0
+		ENDIF
+		IF n%=%h
+			IF showChart% = 1
+				showChart% = 0
+			ELSE	
+				showChart%=1
+			ENDIF
+			reDraw%=1
+			Draw:
+			reDraw%=0
+		ENDIF
+		IF n%=%a
+			zeichabl:
+		ENDIF
+		IF n%=%f
+			eingabe:
+		ENDIF
+		IF n%=1
+			dINIT "Graph"
+			f$(5)=FIX$(xmin,2,8)
+			dEDIT f$(5),"X-min: ",20
+			dBUTTONS "OK", 13
+			DIALOG
+			xmin=EVAL(f$(5))
+			fl=0
+			IF f$(1)<>""
+				Draw:
+			ENDIF
+		ENDIF
+		IF n%=2
+			bereich:
+		ENDIF
+		IF n%=8 AND f$(1)<>""
+			DO
+				f$(5)=FIX$(aw,10,15)
+				dINIT "Under Limit"
+				dEDIT f$(5),"a=",20
+				dBUTTONS "OK",13,"Pen",%s,"RF",%r
+				n%=DIALOG
+				aw=fun:(f$(5))
+				IF n%=%r
+					x=rf:(aw-0.5,aw+0.5)
+					aw=x
+				ENDIF
+				IF n%=%s
+					aw=xypen:
+				ENDIF
+			UNTIL n%=13
+			n%=0
+		ENDIF
+		IF n%=9 AND f$(1)<>""
+			DO
+			f$(5)=FIX$(ew,10,15)
+			dINIT "Over Limit"
+			dEDIT f$(5),"b=",20
+			dBUTTONS "OK",13,"Pen",%s,"RF",%r
+			n%=DIALOG
+			ew=fun:(f$(5))
+			IF n%=%r
+				x=rf:(ew-0.5,ew+0.5)
+				ew=x
+			ENDIF
+			IF n%=%s
+				ew=xypen:
+			ENDIF
+			UNTIL n%=13
+			n%=0
+		ENDIF
+		IF n%=14
+			flach:
+		ENDIF
+		IF n%=10
+			xg=xc+ew*xfakt
+			gAT xg-58,0
+			gLINETO xg-58,200
+			xg=xc+aw*xfakt
+			gAT xg-58,0
+			gLINETO xg-58,200
+		ENDIF
+		IF n%=%r
+			x=rf:(aw,ew)
+			dINIT "Regula Falsi"
+			dFLOAT x,"xs=",-100000,100000
+			dBUTTONS "OK",13
+			DIALOG
+		ENDIF
+		IF n%=%s
+			numint:
+		ENDIF
+		IF n%=%o
+			bogen:
+		ENDIF
+		IF n%=%m
+			mantel:
+		ENDIF
+		IF n%=11
+			schwerf:
+		ENDIF
+		IF n%=12
+			schwerk:
+		ENDIF
+		IF n%=15
+			schwerd:
+		ENDIF
+		IF n%=%v
+			volumen:
+		ENDIF
+		IF n%=%u
+			dINIT "Graph"
+			dTEXT "","Freeware from Emil Tchekov",2
+			dTEXT "","http://www.tchekov.net",2
+			dTEXT "","emil@tchekov.net",2
+			dTEXT "","Ported to Series 80",2
+			dTEXT "","by Sami Vuori",2
+			dTEXT "","http://www.symbioosi.net",2
+			dTEXT "","sambonen@gmail.com",2
+			dBUTTONS "OK", 13
+			DIALOG
+		ENDIF
+		IF n%=%l
+			momentf:
+		ENDIF
+		IF n%=%k
+			momentk:
+		ENDIF
+		IF n%=20
+			dINIT "Calc"
+			dEDIT aus$,"Expression:",20
+			dBUTTONS "OK",13
+			DIALOG
+			x=fun:(aus$)
+			IF fl=3
+				dINIT "Calc"
+				dTEXT "",ERR$(ERR),2
+				dBUTTONS "OK",13
+				DIALOG
+				fl=1
+			ELSE
+				dINIT "Calc"
+				dFLOAT x,"Result:",-10000000,10000000
+				dBUTTONS "OK",13
+				DIALOG
+			ENDIF
+			x=0
+		ENDIF
+	UNTIL n%=%e
+ENDP
+
+PROC bereich:
+	LOCAL a$(6,30)
+	l::
+	a$(2)=FIX$(xmax,2,8)
+	a$(1)=FIX$(xmin,2,8)
+	a$(3)=FIX$(xscl,2,8)
+	a$(5)=FIX$(ymax,2,8)
+	a$(4)=FIX$(ymin,2,8)
+	a$(6)=FIX$(yscl,2,8)
+	dINIT "X - Axis:"
+	dEDIT a$(1),"min: ",10
+	dEDIT a$(2),"max: ",10
+	dEDIT a$(3),"Scale: ",10
+	dBUTTONS "OK",13
+	DIALOG
+	dINIT "Y - Axis:"
+	dEDIT a$(4),"Y-min: ",10
+	dEDIT a$(5),"Y-max: ",10
+	dEDIT a$(6),"Scale: ",10
+	dBUTTONS "OK",13
+	DIALOG
+	ONERR l
+	xmax=EVAL(a$(2))
+	xmin=EVAL(a$(1))
+	xscl=EVAL(a$(3))
+	ymax=EVAL(a$(5))
+	ymin=EVAL(a$(4))
+	yscl=EVAL(a$(6))
+	ONERR OFF
+	fl=0
+	IF f$(1)<>""
+		Draw:
+	ENDIF
+ENDP
+
+PROC Draw:
+	LOCAL rf%, ynumber,ynumberCheck,ynumber$(5),xnumber,xnumberCheck,xnumber$(5),toispual%
+	IF xmin>=xmax OR ymin>=ymax
+		dINIT "Window"
+		dTEXT "","Max must be greater as Min",2
+		dBUTTONS "OK",13
+		DIALOG
+		RETURN
+	ENDIF
+	IF (xmin<0 AND xmax<0) OR (xmin>0 AND xmax>0)
+		xfakt=ABS(640/(xmax-xmin))
+	ELSE
+		xfakt=640/(ABS(xmin)+ABS(xmax))
+	ENDIF
+	IF (ymin<0 AND ymax<0) OR (ymin>0 AND ymax>0)
+		yfakt=ABS(200/(ymax-ymin))
+	ELSE
+		yfakt=200/(ABS(ymin)+ABS(ymax))
+	ENDIF
+	xc=-xmin*xfakt
+	yc=200+ymin*yfakt
+	stp=1/xfakt
+	REM Are we redrawing?
+	IF redraw%=0
+		dINIT "Step"
+		f$(5)=FIX$(stp,3,5)
+		dEDIT f$(5),"Best:",5
+		dBUTTONS "OK",13
+		DIALOG
+	ENDIF
+	stp=fun:(f$(5))
+	IF fl=3 OR stp>=1 OR stp<=0
+		gIPRINT "False Entry!"
+		stp=1/xfakt
+		fl=1
+	ENDIF
+REM	DEFAULTWIN 1
+	gCLS
+	gSETWIN 32,0,640,200
+	gCOLOR 0,0,0
+	gFONT 9
+	x=0
+	xnumber=0
+	DO
+		x=x+xscl
+		xg=xc+x*xfakt
+		IF showChart%=1
+			REM chart
+			gCOLOR 200,200,200
+			gAT xg-58,0
+			gLINETO xg-58,200
+			gCOLOR 0,0,0
+		ENDIF
+
+		gAT xg-58,yc
+		gLINETO xg-58,yc-4
+		
+		REM labels
+		IF showLabels% = 1
+			gAT xg-58-7,yc+4+8
+			xnumber=xnumber+xscl
+			xnumberCheck = xnumber-(INT(xnumber))
+			xnumber$=GEN$(xnumber,4)
+			IF xnumberCheck>-0.0001 AND xnumberCheck<0.0001
+				xnumber$=xnumber$+".0"
+			ENDIF
+			IF xnumber>0
+				IF toispual%=0
+					gPRINT xnumber$
+				ENDIF
+			ENDIF
+			IF toispual%=1
+				toispual%=0
+			ELSE
+				toispual%=1
+			ENDIF
+		ENDIF
+	UNTIL x>xmax
+	x=0
+	xnumber=0
+	DO
+		x=x-xscl
+		xg=xc+x*xfakt
+		IF showChart%=1
+			REM chart
+			gCOLOR 200,200,200
+			gAT xg-58,0
+			gLINETO xg-58,200
+			gCOLOR 0,0,0
+		ENDIF
+
+		gAT xg-58,yc
+		gLINETO xg-58,yc-4
+		REM labels
+		IF showLabels% = 1
+			gAT xg-58-7-5,yc+4+5-15
+			xnumber=xnumber-xscl
+			xnumberCheck = xnumber-(INT(xnumber))
+			xnumber$=GEN$(xnumber,4)
+			IF xnumberCheck>-0.0001 AND xnumberCheck<0.0001
+				xnumber$=xnumber$+".0"
+			ENDIF
+			IF xnumber<0
+				IF toispual%=0
+					gPRINT xnumber$
+				ENDIF
+			ENDIF
+			IF toispual%=1
+				toispual%=0
+			ELSE
+				toispual%=1
+			ENDIF
+		ENDIF
+	UNTIL x<xmin
+	y=0
+	ynumber=0
+REM	gSTYLE 0
+	DO
+		y=y+yscl
+		yg=yc-y*yfakt
+		IF showChart%=1
+			REM chart
+			gCOLOR 200,200,200
+			gAT 0,yg
+			gLINETO 640,yg
+			gCOLOR 0,0,0
+		ENDIF
+
+		gAT xc-58,yg
+		gLINETO xc+4-58,yg
+		REM labels
+		IF showLabels% = 1
+			gAT xc-58+8,yg+4
+			ynumber=ynumber+yscl
+			ynumberCheck = ynumber-(INT(ynumber))
+			ynumber$=GEN$(ynumber,4)		
+			IF ynumberCheck=0
+				ynumber$=ynumber$+".0"
+			ENDIF
+			IF ynumber>0		
+				gPRINT ynumber$
+			ENDIF
+		ENDIF
+	UNTIL y>ymax
+	y=0
+	ynumber=0
+	DO
+		y=y-yscl
+		yg=yc-y*yfakt
+		REM chart
+		IF showChart%=1
+			gCOLOR 200,200,200
+			gAT 0,yg
+			gLINETO 640,yg
+			gCOLOR 0,0,0
+		ENDIF
+		
+		gAT xc-58,yg
+		gLINETO xc+4-58,yg
+		REM labels
+		IF showLabels% = 1
+			gCOLOR 0,0,0
+			ynumber=ynumber-yscl
+			REM check if an even number ("xx.0")
+			ynumberCheck = ynumber-(INT(ynumber))
+			ynumber$=GEN$(ynumber,4)		
+			IF ynumberCheck=0
+				ynumber$=ynumber$+".0"
+			ENDIF
+			IF ynumber<0
+				IF ynumber<-9
+					gAT xc-58+8-30-6,yg+4
+				ELSE
+					gAT xc-58+8-30,yg+4
+				ENDIF
+				gPRINT ynumber$
+			ENDIF
+		ENDIF
+	UNTIL y<ymin
+	gCOLOR 0,0,0
+	gAT 0,yc
+	gLINETO 640,yc
+	gAT xc-58,0
+	gLINETO xc-58,200
+
+	gSETPENWIDTH 1
+	gCOLOR 0,0,255
+	rf%=0
+	x=xmin-stp
+	DO
+		x=x+stp
+		y=fun:(f$(1))
+		xg=xc+x*xfakt
+		yg=yc-y*yfakt
+		IF fl<>3
+			rf%=1
+			IF yg>0 AND yg<200
+				gAT xg-58,yg
+				gBOX 2,2
+			ENDIF
+		ENDIF
+		fl=1
+	UNTIL x>xmax
+	IF rf%=0
+		dINIT "Warning"
+		dTEXT "","Funktion "+f$(1),2
+		dTEXT "","has no real Y in this",2
+		dTEXT "","Window",2
+		dBUTTONS "OK",13
+		DIALOG
+		fl=0
+		RETURN
+	ELSE
+		rf%=0
+	ENDIF
+	REM f(x):n viivan väri
+	gCOLOR 255,0,0 REM 120,120,120
+	x=xmin-stp
+	DO
+		x=x+stp
+		y=fun:(f$(2))
+		xg=xc+x*xfakt
+		yg=yc-y*yfakt
+		IF fl<>3
+			rf%=1
+			IF yg>0 AND yg<200
+				gAT xg-58,yg
+				gBOX 2,2
+			ENDIF
+		ENDIF
+		fl=1
+	UNTIL x>xmax
+	IF rf%=0
+		dINIT "Warning"
+		dTEXT "","Funktion "+f$(2),2
+		dTEXT "","has no real Y in this",2
+		dTEXT "","Window",2
+		dBUTTONS "OK",13
+		DIALOG
+		fl=0
+		RETURN
+	ELSE
+		rf%=0
+	ENDIF
+	gSETPENWIDTH 1
+	gCOLOR 255,0,0
+	x=0
+ENDP
+
+PROC fun:(b$)
+	ONERR labell
+		RETURN EVAL(b$)
+	ONERR OFF
+	labell::
+	fl=3
+ENDP
+
+PROC eingabe:
+	LOCAL a,f,c%,l%
+	x=0
+	dINIT "Funktions"
+	dEDIT f$(1),"f(x): ",20
+	dBUTTONS "OK", 13
+	DIALOG
+	fl=0
+	a=fun:(f$(1))
+	IF fl=3 
+		dINIT "Funktions"
+		dTEXT "",ERR$(ERR),2
+		dBUTTONS "OK",13
+		DIALOG
+	ENDIF
+	fl=1
+	dINIT "Funktions"
+	dEDIT f$(2),"g(x): ",20
+	dBUTTONS "OK", 13
+	DIALOG
+	fl=0
+	a=fun:(f$(2))
+	IF fl=3 
+		dINIT "Funktions"
+		dTEXT "",ERR$(ERR),2
+		dBUTTONS "OK",13
+		DIALOG
+	ENDIF
+	fl=1
+	l%=LEN(f$(1))
+	c%=LOC(f$(1),",")
+	mf$(1)=f$(1)
+	mf$(2)=f$(2)
+	WHILE c%<>0
+		mf$(1)=LEFT$(mf$(1),c%-1)+"."+RIGHT$(mf$(1),l%-c%)
+		c%=LOC(mf$(1),",")
+	ENDWH
+	l%=LEN(f$(2))
+	c%=LOC(f$(2),",")
+	WHILE c%<>0
+		mf$(2)=LEFT$(mf$(2),c%-1)+"."+RIGHT$(mf$(2),l%-c%)
+		c%=LOC(mf$(2),",")
+	ENDWH
+	Draw:
+ENDP
+
+PROC wkey:
+	LOCAL ev&(16)
+	LOCAL x1,y1
+	DO
+		GETEVENT32 ev&()
+		IF fl<>0 AND ev&(3)<>148 AND ev&(3)<>10000 AND ev&(1)=1032
+			x1=(ev&(6)-xc)/xfakt
+			y1=-(ev&(7)-yc)/yfakt
+			IF ev&(6)>400 AND ev&(7)<60
+				gIPRINT "x="+FIX$(x1,2,6)+"; y="+FIX$(y1,2,6)
+			ELSE
+				gIPRINT "x="+FIX$(x1,2,6)+"; y="+FIX$(y1,2,6),2
+			ENDIF
+		ENDIF
+	UNTIL ev&(1)=1031 AND (ev&(3)=148 OR ev&(3)=10000) 
+ENDP
+
+PROC xypen:
+	LOCAL ev&(16)
+	LOCAL x1,y1
+	gIPRINT "Press Enter when ready..."
+	DO
+		GETEVENT32 ev&()
+		IF ev&(1)=1032
+			x1=(ev&(6)-xc)/xfakt
+			y1=-(ev&(7)-yc)/yfakt
+			IF ev&(6)>400 AND ev&(7)<60
+				gIPRINT "x="+FIX$(x1,2,6)+"; y="+FIX$(y1,2,6)
+			ELSE
+				gIPRINT "x="+FIX$(x1,2,6)+"; y="+FIX$(y1,2,6),2
+			ENDIF
+		ENDIF
+	UNTIL ev&(1)=1031 AND ev&(3)=3
+	RETURN x1
+ENDP
+
+PROC rf:(xa,xb)
+	LOCAL y1,y2,xs,x1,x2,b%,j
+	dINIT "Regula Falsi"
+	dCHOICE b%, "Whitin:", mf$(1)+" und X,"+mf$(2)+" und X,"+mf$(1)+" und "+mf$(2)
+	dBUTTONS "OK", 13
+	DIALOG
+	x1=xa
+	x2=xb
+	j=0
+	IF b%<3
+		ONERR label
+		DO
+			x=x1
+			y1=fun:(f$(b%))
+			x=x2
+			y2=fun:(f$(b%))
+			xs=x1-y1*((x2-x1)/(y2-y1))
+			x1=x2
+			x2=xs
+			j=j+1
+		UNTIL j>1000
+		ONERR OFF
+	ELSE
+		ONERR label
+		DO
+			x=x1
+			y1=fun:(f$(1))-fun:(f$(2))
+			x=x2
+			y2=fun:(f$(1))-fun:(f$(2))
+			xs=x1-y1*((x2-x1)/(y2-y1))
+			x1=x2
+			x2=xs
+			j=j+1
+		UNTIL j>1000
+		ONERR OFF
+	ENDIF
+	label::
+	IF j>1000
+		dINIT "Regula Falsi"
+		dTEXT "","Not Found!",2
+		dTEXT "","RF passes '0'",2
+		dBUTTONS "OK",13
+		DIALOG
+		RETURN 0
+	ENDIF
+	RETURN xs
+ENDP
+
+PROC sinh:(num)
+	RETURN (EXP(num)-EXP(-num))/2
+ENDP
+
+PROC cosh:(num)
+	RETURN (EXP(num)+EXP(-num))/2
+ENDP
+
+PROC tanh:(num)
+	LOCAL a
+	a=sinh:(num)/cosh:(num)
+	RETURN a
+ENDP
+
+PROC coth:(num)
+	LOCAL a
+	a=cosh:(num)/sinh:(num)
+	RETURN a
+ENDP
+
+PROC arsinh:(x)
+	RETURN LN(x+SQR(x**2+1))
+ENDP
+
+PROC arcosh:(x)
+	RETURN LN(x+SQR(x**2-1))
+ENDP
+
+PROC artanh:(x)
+	RETURN 0.5*LN((1+x)/(1-x))
+ENDP
+
+PROC arcoth:(x)
+	RETURN 0.5*LN((x+1)/(x-1))
+ENDP
+
+PROC simpson:(a$)
+	LOCAL h,b,y1,summ(4)
+	h=(ew-aw)/100
+	x=aw
+	y1=fun:(a$)
+	IF fl=3
+		y1=0
+		fl=1
+	ENDIF
+	summ(1)=summ(1)+y1
+	x=ew
+	y1=fun:(a$)
+	IF fl=3
+		fl=1
+		y1=0
+	ENDIF
+	summ(1)=summ(1)+y1
+	b=0
+	DO
+		b=b+2
+		x=aw+h*b
+		y1=fun:(a$)
+		IF fl=3
+			y1=0
+			fl=1
+		ENDIF
+		summ(3)=summ(3)+y1
+	UNTIL b>96
+	b=-1
+	DO
+		b=b+2
+		x=aw+h*b
+		y1=fun:(a$)
+		IF fl=3
+			y1=0
+			fl=1
+		ENDIF
+		summ(2)=summ(2)+y1
+	UNTIL b>97
+	summ(2)=summ(2)*4
+	summ(3)=summ(3)*2
+	summ(4)=(h*(summ(1)+summ(2)+summ(3)))/3
+	x=0
+	RETURN summ(4)
+ENDP
+
+
+PROC zeichabl:
+	LOCAL y1,n%
+	dINIT "Graph"
+	dCHOICE n%,"1-st Derivative from:",mf$(1)+","+mf$(2)
+	dBUTTONS "OK", 13
+	DIALOG
+	gCOLOR 100,0,0 REM n%*60,n%*60,n%*60
+	x=xmin-stp
+	DO
+		x=x+stp
+		y1=ableitung:(f$(n%))
+		xg=xc+x*xfakt
+		yg=yc-y1*yfakt
+		IF yg>0 AND yg<200
+			IF fl<>4
+				gAT xg-58,yg
+				gBOX 2,2 REM Was 3,3
+				fl=1
+			ENDIF
+		ENDIF
+	UNTIL x>xmax
+	x=0
+	gCOLOR 0,0,0
+ENDP
+
+PROC ableitung:(a$)
+	LOCAL dx,dy,lx,n%
+	dx=0.000001
+	lx=x
+	x=x+dx
+	fl=1
+	dy=fun:(a$)
+	IF fl=3
+		dy=0
+		fl=4
+	ENDIF
+	x=lx
+	lx=dy
+	dy=fun:(a$)
+	IF fl=3
+		dy=0
+		fl=4
+	ENDIF
+	lx=lx-dy
+	dy=lx
+	dy=lx/dx
+	RETURN dy
+ENDP
+
+PROC schwerf:
+	LOCAL s(5),i%,fx$(3,255),g,b%
+	dINIT "Areamasspoint"
+	dCHOICE b%, "Area:", mf$(1)+" and X,"+mf$(2)+" and X,"+mf$(1)+" and "+mf$(2)
+	dBUTTONS "OK", 13
+	DIALOG
+	IF b%<3
+		fx$(1)=f$(b%)
+		fx$(2)="x*("+f$(b%)+")"
+		fx$(3)="(("+f$(b%)+")**2)"
+	ELSE
+		fx$(1)=f$(1)+"-"+f$(2)
+		fx$(2)="x*("+f$(1)+"-"+f$(2)+")"
+		fx$(3)="(("+f$(1)+")**2-("+f$(2)+")**2)"
+	ENDIF
+	s(1)=simpson:(fx$(1))
+	s(2)=simpson:(fx$(2))
+	s(3)=0.5*simpson:(fx$(3))
+	dINIT "Areamasspoint"
+	dFLOAT s(1),"A=    ",-1000000,1000000
+	dFLOAT s(2),"Xs*A= ",-1000000,1000000
+	dFLOAT s(3),"Ys*A= ",-1000000,1000000
+	s(4)=s(2)/s(1)
+	s(5)=s(3)/s(1)
+	dFLOAT s(4),"Xs=   ",-1000000,1000000
+	dFLOAT s(5),"Ys=   ",-1000000,1000000
+	dBUTTONS "OK", 13
+	DIALOG
+ENDP
+
+PROC schwerd:
+	LOCAL s(2),fx$(2,255),g
+	fx$(1)="x*(("+f$(1)+")**2)"
+	fx$(2)="(("+f$(1)+")**2)"
+	s(1)=simpson:(fx$(1))
+	s(2)=simpson:(fx$(2))
+	g=s(1)/s(2)
+	dINIT "Bodymasspoint"
+	dFLOAT s(2),"V=    ",-1000000,1000000
+	dFLOAT s(1),"Xs*V= ",-1000000,1000000
+	dFLOAT g,"Xs= ",-1000000,1000000
+	dTEXT "","Ys = 0"
+	dTEXT "","Zs = 0"
+	dBUTTONS "OK", 13
+	DIALOG
+ENDP
+
+PROC schwerk:
+	LOCAL s(5),n%
+	dINIT "Curvemasspoint"
+	dCHOICE n%,"Select:", mf$(1)+","+mf$(2)
+	dBUTTONS "OK",13
+	DIALOG
+	s(1)=wurzabl:(f$(n%))
+	s(2)=wurzablb:(f$(n%))
+	s(3)=wurzabla:(f$(n%))
+	s(4)=s(2)/s(1)
+	s(5)=s(3)/s(1)
+	dINIT "Curvemasspoint"
+	dFLOAT s(1),"S=    ",-1000000,1000000
+	dFLOAT s(2),"Xs*S= ",-1000000,1000000
+	dFLOAT s(3),"Ys*S= ",-1000000,1000000
+	dFLOAT s(4),"Xs=   ",-1000000,1000000
+	dFLOAT s(5),"Ys=   ",-1000000,1000000
+	dBUTTONS "OK", 13
+	DIALOG
+ENDP
+
+PROC numint:
+	LOCAL a%,g,fs$(255)
+	dINIT "Numerical Integration"
+	dCHOICE a%,"Select",  mf$(1)+" and X,"+mf$(2)+" and X,"+mf$(1)+" and "+mf$(2)
+	dBUTTONS "OK",13
+	DIALOG
+	IF a%<3
+		g=simpson:(f$(a%))
+	ELSE
+		fs$="("+f$(1)+"-"+f$(2)+")"
+		g=simpson:(fs$)
+	ENDIF
+	dINIT "Simpson"
+	dFLOAT g,"A= ",-100000,1000000
+	dBUTTONS "OK",13
+	DIALOG
+ENDP
+
+PROC bogen:
+	LOCAL n%,b
+	dINIT "Curvelength"
+	dCHOICE n%,"Select", mf$(1)+","+mf$(2)
+	dBUTTONS "OK",13
+	DIALOG
+	b=wurzabl:(f$(n%))
+	dINIT "Curvelength"
+	dFLOAT b,"L= ",-1000000,1000000
+	dBUTTONS "OK",13
+	DIALOG
+ENDP
+
+PROC wurzabl:(a$)
+	LOCAL b,summ(4),h
+	h=(ew-aw)/100
+	x=aw
+	summ(1)=SQR(1+ableitung:(a$)**2)
+	b=0
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(3)=summ(3)+SQR(1+ableitung:(a$)**2)
+	UNTIL b>96
+	b=-1
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(2)=summ(2)+SQR(1+ableitung:(a$)**2)
+	UNTIL b>97
+	x=ew
+	summ(1)=summ(1)+SQR(1+ableitung:(a$)**2)
+	summ(2)=summ(2)*4
+	summ(3)=summ(3)*2
+	summ(4)=(h*(summ(1)+summ(2)+summ(3)))/3
+	RETURN summ(4)
+ENDP
+
+PROC wurzabla:(a$)
+	LOCAL b,summ(4),h
+	h=(ew-aw)/100
+	x=aw
+	summ(1)=fun:(a$)*SQR(1+ableitung:(a$)**2)
+	b=0
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(3)=summ(3)+fun:(a$)*SQR(1+ableitung:(a$)**2)
+	UNTIL b>96
+	b=-1
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(2)=summ(2)+fun:(a$)*SQR(1+ableitung:(a$)**2)
+	UNTIL b>97
+	x=ew
+	summ(1)=summ(1)+fun:(a$)*SQR(1+ableitung:(a$)**2)
+	summ(2)=summ(2)*4
+	summ(3)=summ(3)*2
+	summ(4)=(h*(summ(1)+summ(2)+summ(3)))/3
+	RETURN summ(4)
+ENDP
+
+PROC wurzablb:(a$)
+	LOCAL b,summ(4),h
+	h=(ew-aw)/100
+	x=aw
+	summ(1)=x*SQR(1+ableitung:(a$)**2)
+	b=0
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(3)=summ(3)+x*SQR(1+ableitung:(a$)**2)
+	UNTIL b>96
+	b=-1
+	DO
+		b=b+2
+		x=aw+h*b
+		summ(2)=summ(2)+x*SQR(1+ableitung:(a$)**2)
+	UNTIL b>97
+	x=ew
+	summ(1)=summ(1)+x*SQR(1+ableitung:(a$)**2)
+	summ(2)=summ(2)*4
+	summ(3)=summ(3)*2
+	summ(4)=(h*(summ(1)+summ(2)+summ(3)))/3
+	RETURN summ(4)
+ENDP
+
+PROC mantel:
+	LOCAL g,b%
+	dINIT "Mantelarea"
+	dCHOICE b%,"Select", mf$(1)+","+mf$(2)
+	dBUTTONS "OK",13
+	DIALOG
+	g=2*PI*wurzabla:(f$(b%))
+	dINIT "Mantelarea"
+	dFLOAT g,"Mx= ",-1000000,1000000
+	dBUTTONS "OK",13
+	DIALOG
+ENDP
+
+PROC volumen:
+	LOCAL l$(255),g,b%
+	dINIT "Volume"
+	dCHOICE b%,"Select", mf$(1)+","+mf$(2)
+	dBUTTONS "OK",13
+	DIALOG
+	l$="("+f$(b%)+")**2)"
+	g=PI*simpson:(l$)
+	dINIT "Volume X-Axis"
+	dFLOAT g,"V=",-1000000,1000000
+	dBUTTONS "OK",13
+	DIALOG
+ENDP
+
+PROC flach:
+	LOCAL l%,y1,scl
+	scl=0.01
+	dINIT "Area"
+	dCHOICE l%,"Within:",mf$(1)+" and X,"+mf$(2)+" and X,"+mf$(1)+" and "+mf$(2)
+	dFLOAT scl,"lpi:",0,1
+	dBUTTONS "OK", 13
+	DIALOG
+	xg=xc+ew*xfakt
+	gAT xg-58,0
+	gLINETO xg-58,200
+	xg=xc+aw*xfakt
+	gAT xg-58,0
+	gLINETO xg-58,200
+	gCOLOR 0,255,120 REM (4-l%)*60,(4-l%)*60,(4-l%)*60
+	x=aw-scl
+	IF l%<3
+		DO
+			x=x+scl
+			y=fun:(f$(l%))
+			xg=xc+x*xfakt
+			yg=yc-y*yfakt
+			gAT xg-58,yg
+			gLINETO xg-58,yc
+		UNTIL x>ew-scl
+	ELSE
+		DO
+			x=x+scl
+			y=fun:(f$(1))
+			y1=fun:(f$(2))
+			xg=xc+x*xfakt
+			yg=yc-y*yfakt
+			gAT xg-58,yg
+			yg=yc-y1*yfakt
+			gLINETO xg-58,yg
+		UNTIL x>ew-scl
+	ENDIF
+	gCOLOR 0,0,0
+ENDP
+
+PROC momentf:
+	LOCAL s(3),fx$(2,255),b%
+	dINIT "Areamasspoint"
+	dCHOICE b%, "Area:",mf$(1)+" and X,"+mf$(2)+" and X,"+mf$(1)+" and "+mf$(2)
+	dBUTTONS "OK", 13
+	DIALOG
+	IF b%<3
+		fx$(1)="("+f$(b%)+")**3)"
+		fx$(2)="(x**2)*"+f$(b%)
+		s(1)=(1/3)*simpson:(fx$(1))
+		s(2)=simpson:(fx$(2))
+		s(3)=s(1)+s(2)
+		dINIT "Areamasspoint"
+		dFLOAT s(1),"Ix= ",-1000000,1000000
+		dFLOAT s(2),"Iy= ",-1000000,1000000
+		dFLOAT s(3),"Ip= ",-1000000,1000000
+		dBUTTONS "OK", 13
+		DIALOG
+	ELSE
+		fx$(1)="(("+f$(1)+")**3-("+f$(1)+")**3)"
+		fx$(2)="(x**2)*("+f$(1)+"-"+f$(2)+")"
+		s(1)=(1/3)*simpson:(fx$(1))
+		s(2)=simpson:(fx$(2))
+		s(3)=s(1)+s(2)
+		dINIT "Areamasspoint"
+		dFLOAT s(1),"Ix= ",-1000000,1000000
+		dFLOAT s(2),"Iy= ",-1000000,1000000
+		dFLOAT s(3),"Ip= ",-1000000,1000000
+		dBUTTONS "OK", 13
+		DIALOG
+	ENDIF
+ENDP
+
+PROC momentk:
+	LOCAL fx$(255),g
+	fx$="("+f$(1)+")**4)"
+	g=0.5*PI*simpson:(fx$)
+	dINIT "Bodymasspoint"
+	dFLOAT g,"Ix= ",-1000000,1000000
+	dBUTTONS "OK", 13
+	DIALOG
+ENDP
