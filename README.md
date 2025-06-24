@@ -1,4 +1,4 @@
-Behold: the only graphing calculator made for Series 80 devices. Original code by Emil Tchekov (for Psion 5 MX), but the porting and a couple of extra features was coded by me.
+Behold: the only graphing calculator made for Series 80 devices. Original code by Emil Tchekov (for Psion 5 MX), but the porting and a couple of extra features was coded by me. The language is OPL.
 
 The most basic commands:
 - exponent: x**n (e.g. 2^3 = 2**3)
